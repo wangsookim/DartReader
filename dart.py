@@ -199,3 +199,57 @@ class DisclosureInfo(DartBase):
         response = self.convert_xml_to_dataframe(response)
 
         return response
+
+
+@dataclass
+class ReportInfo(DartBase):
+
+    def get_report(self, corp_code, keyword, bsns_year, report_code='11011') -> pd.core.frame.DataFrame:
+        """사업보고서의 주요정보를 키워드에 따라 가져옴
+
+        :param str corp_code: 고유번호
+        :param str keyword: 정보 키워드(증자현황, 배당, 자기주식 취득 및 처분 등등)
+        :param int bsns_year: 사업연도
+        :param str report_code: 보고서코드(11011: 사업보고서, 11012: 반기보고서, 11013: 1분기보고서, 11014: 3분기보고서)
+
+        :returns pandas.core.frame.DataFrame: 키워드에 해당하는 사업보고서의 주요정보
+        """
+        keyword_map = {
+            '증자': 'irdsSttus',
+            '배당': 'alotMatter',
+            '자기주식': 'tesstkAcqsDspsSttus',
+            '최대주주': 'hyslrSttus',
+            '최대주주변동': 'hyslrChgSttus',
+            '소액주주': 'mrhlSttus',
+            '임원': 'exctvSttus',
+            '직원': 'empSttus',
+            '임원개인보수': 'hmvAuditIndvdlBySttus',
+            '임원전체보수': 'hmvAuditAllSttus',
+            '개인별보수': 'indvdlByPay',
+            '타법인출자': 'otrCprInvstmntSttus',
+        }
+
+        if keyword not in keyword_map.keys():
+            raise ValueError(f'keyword is invalid: you can use ont of {keyword_map.keys()}')
+
+        url = f'https://opendart.fss.or.kr/api/{keyword_map[keyword]}.json'
+        params = {
+            'crtfc_key': self.api_key,
+            'corp_code': corp_code,
+            'bsns_year': bsns_year,
+            'reprt_code': report_code, # 보고서 코드 ("11011" = 사업보고서)
+        }
+
+        response = self.request(url, params=params)
+        response = self.load_json(response, list_off=False)
+
+        df = json_normalize(response, 'list')
+
+        return df
+
+
+@dataclass
+class FinancialInfo(DartBase):
+
+    def __post_init__(self):
+        pass
