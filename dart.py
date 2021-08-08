@@ -249,7 +249,108 @@ class ReportInfo(DartBase):
 
 
 @dataclass
-class FinancialInfo(DartBase):
+class FinancialStatement(DartBase):
 
-    def __post_init__(self):
-        pass
+    def get_statement(self, corp_code: Union[str, List[str]],
+                      bsns_year: int, report_code: str = '11011') -> pd.core.frame.DataFrame:
+        """상장기업들의 재무정보를 가져옴(단일기업, 복수기업 모두 가능)
+
+        :param str or List[str] corp_code: 고유번호(복수 기업 조회시 기업들의 고유번호 List)
+        :param int bsns_year: 사업연도
+        :param str report_code: 보고서코드(11011: 사업보고서, 11012: 반기보고서, 11013: 1분기보고서, 11014: 3분기보고서)
+
+        :returns pandas.core.frame.DataFrame: 상장기업 재무정보보
+        """
+
+        if type(corp_code) is list:
+            corp_code = ','.join(corp_code)
+            api_type = 'fnlttMultiAcnt.json'
+        else:
+            api_type = 'fnlttSinglAcnt.json'
+
+        url = f'https://opendart.fss.or.kr/api/{api_type}'
+
+        params = {
+            'crtfc_key': self.api_key,
+            'corp_code': corp_code,
+            'bsns_year': bsns_year,  # 사업년도
+            'reprt_code': report_code,  # "11011": 사업보고서
+        }
+
+        response = self.request(url, params=params)
+        response = self.load_json(response)
+
+        df = json_normalize(response, 'list')
+
+        return df
+
+    def get_raw_statement(self, rcp_no: str, report_code: str = '11011') -> str:
+        """재무제표 원본을 가져옴
+
+        :param str rcp_no: 보고서 코드
+        :param str report_code: 보고서코드(11011: 사업보고서, 11012: 반기보고서, 11013: 1분기보고서, 11014: 3분기보고서)
+
+        :returns str: 재무제표 원본
+        """
+
+        url = 'https://opendart.fss.or.kr/api/fnlttXbrl.xml'
+        params = {
+            'crtfc_key': self.api_key,
+            'rcept_no': rcp_no,
+            'reprt_code': report_code,  # "11011"=사업보고서
+        }
+
+        response = self.request(url, params=params)
+        self.check_xml(response)
+        response = self.load_xml(response)
+
+        return response
+
+    def get_all_statement(self, corp_code: str, bsns_year: int, report_code: str = '11011',
+                          fs_div: str = 'CFS') -> pd.core.frame.DataFrame:
+        """특정 기업의 전체 재무제표를 가져옴
+
+        :param str corp_code: 고유번호
+        :param int bsns_year: 사업연도
+        :param str report_code: 보고서코드(11011: 사업보고서, 11012: 반기보고서, 11013: 1분기보고서, 11014: 3분기보고서)
+        :param str fs_div: 재무제표 형태(CFS=연결재무재표, OFS=단일재무제표)
+
+        :returns pandas.core.frame.DataFrame: 특정 기업 전체 재무제표
+        """
+
+        url = 'https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json'
+        params = {
+            'crtfc_key': self.api_key,
+            'corp_code': corp_code,
+            'bsns_year': bsns_year,  # 사업년도
+            'reprt_code': report_code,  # "11011": 사업보고서
+            'fs_div': fs_div,  # "CFS":연결재무제표, "OFS":재무제표
+        }
+
+        response = self.request(url, params=params)
+        response = self.load_json(response)
+
+        df = json_normalize(response, 'list')
+        return df
+
+    def get_taxonomy_statement(self, sj_div: str = 'BS1') -> pd.core.frame.DataFrame:
+        """금융감독원 회계포탈에서 제공하는 IFRS 기반 XBRL 재무제표 공시용 표준계정과목체계(계정과목)을 가져옴
+
+        :param sj_div:
+
+        :returns pandas.core.frame.DataFrame: 금융감독원 회계포탈에서 제공하는 IFRS 기반 XBRL 재무제표 공시용 표준계정과목체계(계정과목)
+        """
+
+        url = 'https://opendart.fss.or.kr/api/xbrlTaxonomy.json'
+        params = {
+            'crtfc_key': self.api_key,
+            'sj_div': sj_div,  # "CFS":연결재무제표, "OFS":재무제표
+        }
+
+        response = self.request(url, params=params)
+        response = self.load_json(response)
+
+        df = json_normalize(response, 'list')
+
+        return df
+
