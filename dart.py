@@ -354,3 +354,48 @@ class FinancialStatement(DartBase):
 
         return df
 
+
+@dataclass
+class ShareDisclosure(DartBase):
+
+    def get_bulk_holders(self, corp_code: str) -> pd.core.frame.DataFrame:
+        """대량보유 상황보고 정보를 가져옴
+
+        :param str corp_code: 고유번호
+
+        :returns pandas.core.frame.DataFrame: 대량보유 상황보고
+        """
+
+        url = 'https://opendart.fss.or.kr/api/majorstock.json'
+        params = {
+            'crtfc_key': self.api_key,
+            'corp_code': corp_code,
+        }
+
+        response = self.request(url, params=params)
+        response = self.load_json(response)
+
+        df = json_normalize(response, 'list')
+
+        return df
+
+    def get_major_holders(self, corp_code: str) -> pd.core.frame.DataFrame:
+        """ 임원 및 주요주주 소유보고 정보를 가져옴
+
+        :param str corp_code: 고유번호
+
+        :returns pandas.core.frame.DataFrame: 임원 및 주요주주 소유보고
+        """
+
+        url = 'https://opendart.fss.or.kr/api/elestock.json'
+        params = {
+            'crtfc_key': self.api_key,
+            'corp_code': corp_code,
+        }
+
+        response = self.request(url, params=params)
+        response = self.load_json(response)
+
+        df = json_normalize(response, 'list')
+
+        return df
