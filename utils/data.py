@@ -3,8 +3,47 @@ from typing import List
 from dataclasses import dataclass
 
 import jaydebeapi
+import psycopg2
 import pandas as pd
 
+
+@dataclass
+class DBConnector:
+    host: str
+    port: int
+    user: str
+    password: str
+    db_name: str = 'postgres'
+
+    def __post_init__(self):
+        self.conn = psycopg2.connect(host=self.host,
+                                     database=self.db_name,
+                                     user=self.user,
+                                     password=self.password,
+                                     port=self.port)
+
+    def __del__(self):
+        self.conn.close()
+
+    def insert(self, sql: str, data: List[tuple]) -> None:
+
+        try:
+            cursor = self.conn.cursor()
+            cursor.executemany(sql, data)
+            self.conn.commit()
+        except Exception as e:
+            print('insert ', e)
+
+    def select(self, query: str) -> pd.DataFrame:
+
+        cursor = self.conn.cursor()
+        cursor.execute(query)
+        columns = [column[0] for column in cursor.description]
+        data = cursor.fetchall()
+        df = pd.DataFrame(data, columns=columns)
+        cursor.close()
+
+        return df
 
 @dataclass
 class SQLiteConnector:
