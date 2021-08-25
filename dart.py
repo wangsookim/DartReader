@@ -1,6 +1,7 @@
 import os
 import io
 import json
+import math
 import requests
 import zipfile
 import xml.etree.ElementTree as ET
@@ -131,6 +132,13 @@ class DisclosureInfo(DartBase):
             if paging is False:
                 break
 
+            if math.ceil(response['total_count']/response['page_count']) == response['page_no']:
+                break
+
+            params['page_no'] += 1
+
+        df.reset_index(inplace=True, drop=True)
+
         return df
 
     def get_company(self, corp_codes: Union[str, List[str]]) -> pd.core.frame.DataFrame:
@@ -237,7 +245,7 @@ class ReportInfo(DartBase):
             'crtfc_key': self.api_key,
             'corp_code': corp_code,
             'bsns_year': bsns_year,
-            'reprt_code': report_code, # 보고서 코드 ("11011" = 사업보고서)
+            'reprt_code': report_code,  # 보고서 코드 ("11011" = 사업보고서)
         }
 
         response = self.request(url, params=params)
