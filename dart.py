@@ -2,6 +2,7 @@ import os
 import io
 import json
 import math
+import time
 import requests
 import zipfile
 import xml.etree.ElementTree as ET
@@ -11,6 +12,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 from pandas import json_normalize
+from tqdm.autonotebook import tqdm
 
 
 @dataclass
@@ -19,7 +21,7 @@ class DartBase:
 
     @staticmethod
     def request(url: str, params: dict):
-        response = requests.get(url, params)
+        response = requests.get(url, params, verify=False)
 
         return response
 
@@ -159,9 +161,10 @@ class DisclosureInfo(DartBase):
             corp_codes = [corp_codes]
 
         df = pd.DataFrame()
-        for corp_code in corp_codes:
+        for n, corp_code in tqdm(enumerate(corp_codes), total=len(corp_codes)):
+            if (n % 100) == 1 and (n >= 100):
+                time.sleep(10)
             params['corp_code'] = corp_code
-
             response = self.request(url, params=params)
             response = self.load_json(response, list_off=True)
 
